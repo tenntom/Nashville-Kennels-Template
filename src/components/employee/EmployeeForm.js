@@ -1,52 +1,71 @@
-import React, { useContext, useRef, useEffect } from "react"
+import React, { useContext, useRef, useEffect, useState } from "react"
 import { EmployeeContext } from "./EmployeeProvider"
 import { LocationContext } from "../location/LocationProvider"
 import { AnimalContext } from "../animal/AnimalProvider"
 import "./Employees.css"
 
-export const EmployeeForm = (burrito) => {
-    const { addEmployee } = useContext(EmployeeContext)
+export const EmployeeForm = (props) => {
+    const { addEmployee, updateEmployee, employees, getEmployees } = useContext(EmployeeContext)
     const { locations, getLocations } = useContext(LocationContext)
-    const { animals, getAnimals } = useContext(AnimalContext)
+    // const { animals, getAnimals } = useContext(AnimalContext)
 
+    const [employee, setEmployee] = useState({})
+
+    const editMode = props.match.params.hasOwnProperty("employeeId")
+
+    const handleControlledInputChange = (event) => {
+        const newEmployee = { ...employee }
+        newEmployee[event.target.name] = event.target.value
+        console.log(newEmployee)
+        setEmployee(newEmployee)
+    }
+
+    const getEmployeeInEditMode = () => {
+        if (editMode) {
+            const employeeId = parseInt(props.match.params.employeeId)
+            const selectedEmployee = employees.find(e => e.id === employeeId) || {}
+            setEmployee(selectedEmployee)
+        }
+    }
     /*
-        Create references that can be attached to the input
-        fields in the form. This will allow you to get the
-        value of the input fields later when the user clicks
-        the save button.
-
-        No more `document.querySelector()` in React.
-    */
-    const name = useRef(null)
-    const location = useRef(null)
-    const animal = useRef(null)
-
-    /*
-        Get animal state and location state on initialization.
+        Get location state on initialization. Animal state not using yet.
     */
     useEffect(() => {
-       getAnimals().then(getLocations)
+        //    getAnimals()
+        getLocations()
     }, [])
 
+    useEffect(() => {
+        getEmployeeInEditMode()
+    }, employees)
+
+
     const constructNewEmployee = () => {
-        /*
-            The `location` and `animal` variables below are
-            the references attached to the input fields. You
-            can't just ask for the `.value` property directly,
-            but rather `.current.value` now in React.
-        */
-        const locationId = parseInt(location.current.value)
-        const animalId = parseInt(animal.current.value)
+        const locationId = parseInt(employee.locationId)
+        // const animalId = parseInt(animal.current.value)
 
         if (locationId === 0) {
             window.alert("Please select a location")
         } else {
-            addEmployee({
-                name: name.current.value,
-                locationId,
-                animalId
-            })
-            .then(() => burrito.history.push("/employees"))
+            if (editMode) {
+                //Put
+                updateEmployee({
+                    id: employee.id,
+                    name: employee.name,
+                    address: employee.address,
+                    location_id: locationId
+                })
+                    .then(() => props.history.push("/employees"))
+            } else {
+                //Post
+                addEmployee({
+                    name: employee.name,
+                    address: employee.address,
+                    location_id: locationId
+                    // animal_id: animalId
+                })
+                    .then(() => props.history.push("/employees"))
+            }
         }
     }
 
@@ -55,14 +74,29 @@ export const EmployeeForm = (burrito) => {
             <h2 className="employeeForm__title">New Employee</h2>
             <fieldset>
                 <div className="form-group">
-                    <label htmlFor="employeeName">Employee name: </label>
-                    <input type="text" id="employeeName" ref={name} required autoFocus className="form-control" placeholder="Employee name" />
+                    <label htmlFor="name">Employee name: </label>
+                    <input type="text" id="name" name="name" required autoFocus className="form-control"
+                        placeholder="Employee name"
+                        defaultValue={employee.name}
+                        onChange={handleControlledInputChange}
+                    />
                 </div>
             </fieldset>
             <fieldset>
                 <div className="form-group">
-                    <label htmlFor="location">Assign to location: </label>
-                    <select defaultValue="" name="location" ref={location} id="employeeLocation" className="form-control" >
+                    <label htmlFor="employeeAddress">Employee address: </label>
+                    <input type="text" id="address" name="address" required autoFocus className="form-control" placeholder="Employee address"
+                        defaultValue={employee.address}
+                        onChange={handleControlledInputChange}
+                    />
+                </div>
+            </fieldset>
+            <fieldset>
+                <div className="form-group">
+                    <label htmlFor="locationId">Assign to location: </label>
+                    <select defaultValue="" name="locationId" id="employeeLocation" className="form-control"
+                        onChange={handleControlledInputChange}
+                    >
                         <option value="0">Select a location</option>
                         {locations.map(e => (
                             <option key={e.id} value={e.id}>
@@ -72,6 +106,7 @@ export const EmployeeForm = (burrito) => {
                     </select>
                 </div>
             </fieldset>
+            {/* TAKING THIS OUT UNTIL FORM WORKS WITHOUT IT.
             <fieldset>
                 <div className="form-group">
                     <label htmlFor="location">Caretaker for: </label>
@@ -84,14 +119,14 @@ export const EmployeeForm = (burrito) => {
                         ))}
                     </select>
                 </div>
-            </fieldset>
+            </fieldset> */}
             <button type="submit"
                 onClick={evt => {
-                    evt.preventDefault() // Prevent browser from submitting the form
+                    evt.preventDefault()
                     constructNewEmployee()
                 }}
                 className="btn btn-primary">
-                Save Employee
+                {editMode ? "Save Updates" : "Add Employee"}
             </button>
         </form>
     )
